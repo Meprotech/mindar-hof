@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEPROTECH | Premium AR</title>
+    <title>AR Experience | MEPROTECH</title>
     
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
 
@@ -17,70 +17,70 @@
     </script>
 
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        :root { --accent: #ffffff; --bg: #0a0a0a; }
+        body { margin: 0; overflow: hidden; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+        
         #container { width: 100vw; height: 100vh; }
 
-        /* 1. The Branding & Loading Layer */
+        /* Subtle Landing Screen */
         #overlay {
             position: absolute; inset: 0; z-index: 20;
-            background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+            background: var(--bg);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white; transition: opacity 0.5s ease;
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        #logo { width: 80px; margin-bottom: 20px; filter: drop-shadow(0 0 10px #00ff00); }
-
-        .loader {
-            width: 40px; height: 40px; border: 3px solid #333;
-            border-top: 3px solid #00ff00; border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 15px;
+        #status { 
+            font-size: 10px; letter-spacing: 0.2em; color: rgba(255,255,255,0.4); 
+            text-transform: uppercase; margin-bottom: 20px;
         }
 
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Minimal Progress Bar */
+        #progress-container { width: 120px; height: 1px; background: rgba(255,255,255,0.1); overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; }
 
         button {
-            background: #00ff00; color: black; border: none; padding: 12px 30px;
-            font-weight: bold; border-radius: 5px; cursor: pointer; display: none;
-            text-transform: uppercase; letter-spacing: 1px;
+            background: none; border: 1px solid rgba(255,255,255,0.3); color: white;
+            padding: 12px 40px; font-size: 11px; letter-spacing: 0.15em;
+            cursor: pointer; display: none; text-transform: uppercase;
+            transition: all 0.3s;
         }
+        button:hover { background: white; color: black; border-color: white; }
 
-        /* 2. The Scanning Viewfinder (Active during AR) */
+        /* Subtle Viewfinder */
         #ui-helper {
             position: absolute; inset: 0; z-index: 10;
-            display: none; pointer-events: none;
-            border: 40px solid rgba(0,0,0,0.3);
+            display: none; pointer-events: none; opacity: 0;
+            transition: opacity 0.5s;
         }
 
         .viewfinder {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 280px; height: 280px;
-            border: 2px solid rgba(255,255,255,0.5);
-            border-radius: 20px;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 240px; height: 240px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 2px;
         }
 
+        /* Scanning Line */
         .viewfinder::after {
-            content: ''; position: absolute; inset: 0;
-            border: 2px solid #00ff00; border-radius: 18px;
-            animation: pulse 2s infinite;
+            content: ''; position: absolute; width: 100%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            top: 0; animation: scan 3s infinite ease-in-out;
         }
 
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
+        @keyframes scan { 0%, 100% { top: 0%; } 50% { top: 100%; } }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <div id="logo">▲</div> <div class="loader" id="spinner"></div>
-        <div id="status">INITIALIZING...</div>
-        <button id="startButton">ENTER EXPERIENCE</button>
+        <div id="status">Loading Engine</div>
+        <div id="progress-container"><div id="progress-bar"></div></div>
+        <button id="startButton">Begin Experience</button>
     </div>
 
     <div id="ui-helper">
         <div class="viewfinder"></div>
-        <div style="position:absolute; bottom: 20px; width:100%; text-align:center; color:white; font-size:14px;">
-            POINT CAMERA AT IMAGE
-        </div>
     </div>
 
     <div id="container"></div>
@@ -91,53 +91,72 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
         const setup = async () => {
+            const status = document.getElementById('status');
+            const progress = document.getElementById('progress-bar');
+            const startBtn = document.getElementById('startButton');
+
             const mindarThree = new MindARThree({
                 container: document.querySelector("#container"),
                 imageTargetSrc: './assets/targets.mind',
             });
 
             const {renderer, scene, camera} = mindarThree;
+            
+            // Fix Color Space Warning
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-            // Lights
-            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-            dirLight.position.set(5, 5, 5);
-            scene.add(dirLight);
+            // Lighting
+            scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+            const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+            sun.position.set(1, 10, 1);
+            scene.add(sun);
 
             const anchor = mindarThree.addAnchor(0);
             const loader = new GLTFLoader();
 
-            // Parallel loading for speed
-            const [model] = await Promise.all([
-                new Promise(res => loader.load('./assets/model.glb', (g) => res(g))),
-                mindarThree.start()
-            ]);
+            // Parallel loading logic
+            try {
+                const [modelGltf] = await Promise.all([
+                    new Promise((res, rej) => {
+                        loader.load('./assets/model.glb', res, (xhr) => {
+                            if (xhr.lengthComputable) {
+                                progress.style.width = (xhr.loaded / xhr.total * 100) + '%';
+                            }
+                        }, rej);
+                    }),
+                    mindarThree.start()
+                ]);
 
-            anchor.group.add(model.scene);
-            
-            // UI Transition
-            document.getElementById('spinner').style.display = 'none';
-            document.getElementById('status').innerText = 'SYSTEM READY';
-            const btn = document.getElementById('startButton');
-            btn.style.display = 'block';
-
-            btn.addEventListener('click', () => {
-                document.getElementById('overlay').style.opacity = '0';
-                setTimeout(() => document.getElementById('overlay').style.display = 'none', 500);
-                document.getElementById('ui-helper').style.display = 'block';
+                anchor.group.add(modelGltf.scene);
                 
-                renderer.setAnimationLoop(() => {
-                    renderer.render(scene, camera);
-                });
-            });
+                status.innerText = "System Ready";
+                document.getElementById('progress-container').style.display = 'none';
+                startBtn.style.display = 'block';
 
-            // Feedback logic
-            anchor.onTargetFound = () => {
-                document.getElementById('ui-helper').style.opacity = '0';
-            };
-            anchor.onTargetLost = () => {
-                document.getElementById('ui-helper').style.opacity = '1';
-            };
+                startBtn.addEventListener('click', () => {
+                    document.getElementById('overlay').style.opacity = '0';
+                    setTimeout(() => document.getElementById('overlay').style.display = 'none', 800);
+                    
+                    const uiHelper = document.getElementById('ui-helper');
+                    uiHelper.style.display = 'block';
+                    setTimeout(() => uiHelper.style.opacity = '1', 100);
+
+                    renderer.setAnimationLoop(() => {
+                        renderer.render(scene, camera);
+                    });
+                });
+
+                anchor.onTargetFound = () => {
+                    document.getElementById('ui-helper').style.opacity = '0';
+                };
+                anchor.onTargetLost = () => {
+                    document.getElementById('ui-helper').style.opacity = '1';
+                };
+
+            } catch (err) {
+                status.innerText = "Check Connection";
+                console.error(err);
+            }
         }
 
         setup();
