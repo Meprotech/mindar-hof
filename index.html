@@ -18,8 +18,8 @@
     <div id="loading-overlay">Loading AR Experience...</div>
     <div id="container"></div>
 
-   <script type="module">
-    // 1. Use full URLs for EVERYTHING. No "bare" names like 'three'.
+<script type="module">
+    // 1. You MUST use full URLs. No "bare" names like 'three'.
     import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
     import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
     import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
@@ -31,12 +31,12 @@
             // 2. Initialize MindAR
             const mindarThree = new MindARThree({
                 container: container,
-                imageTargetSrc: './assets/targets.mind', // ENSURE THIS PATH IS CORRECT
+                imageTargetSrc: './assets/targets.mind',
             });
 
             const {renderer, scene, camera} = mindarThree;
 
-            // 3. Lighting
+            // 3. Simple Lighting
             const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
             scene.add(light);
 
@@ -46,12 +46,12 @@
             const loader = new GLTFLoader();
             loader.load('./assets/model.glb', (gltf) => {
                 anchor.group.add(gltf.scene);
-                console.log("Model loaded successfully");
+                console.log("MEPROTECH: Model Loaded.");
             }, undefined, (error) => {
-                console.error("Model failed to load:", error);
+                console.error("Model Error:", error);
             });
 
-            // 5. Start the Engine
+            // 5. Start Engine
             await mindarThree.start();
 
             renderer.setAnimationLoop(() => {
@@ -59,12 +59,12 @@
             });
 
         } catch (error) {
-            console.error("AR Initialization failed:", error);
-            alert("AR Error: Check the console.");
+            console.error("AR Start Failed:", error);
         }
     }
 
     setup();
 </script>
+
 </body>
 </html>
