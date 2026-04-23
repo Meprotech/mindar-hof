@@ -24,45 +24,55 @@
     import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
     import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
 
-    const setup = async () => {
-        const container = document.querySelector("#container");
-        
-        try {
-            // 2. Initialize MindAR
-            const mindarThree = new MindARThree({
-                container: container,
-                imageTargetSrc: './assets/targets.mind',
-            });
+ const setup = async () => {
+    console.log("MEPROTECH: Setup started...");
+    const container = document.querySelector("#container");
+    const loadingOverlay = document.querySelector("#loading-overlay");
 
-            const {renderer, scene, camera} = mindarThree;
+    try {
+        const mindarThree = new MindARThree({
+            container: container,
+            imageTargetSrc: './assets/targets.mind', 
+        });
 
-            // 3. Simple Lighting
-            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-            scene.add(light);
+        const {renderer, scene, camera} = mindarThree;
+        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+        scene.add(light);
 
-            const anchor = mindarThree.addAnchor(0);
+        const anchor = mindarThree.addAnchor(0);
 
-            // 4. Load your GLB Model
-            const loader = new GLTFLoader();
-            loader.load('./assets/model.glb', (gltf) => {
+        const loader = new GLTFLoader();
+        console.log("MEPROTECH: Attempting to load GLB...");
+
+        loader.load('./assets/model.glb', 
+            (gltf) => {
+                console.log("MEPROTECH: GLB Loaded Successfully");
                 anchor.group.add(gltf.scene);
-                console.log("MEPROTECH: Model Loaded.");
-            }, undefined, (error) => {
-                console.error("Model Error:", error);
-            });
+                loadingOverlay.style.display = 'none';
+            },
+            (xhr) => {
+                const percent = (xhr.loaded / xhr.total * 100);
+                console.log(`MEPROTECH: Model ${percent}% loaded`);
+                loadingOverlay.innerText = `Loading Model: ${Math.round(percent)}%`;
+            },
+            (err) => {
+                console.error("MEPROTECH: GLB Load Error", err);
+                loadingOverlay.innerText = "Model Load Failed (Check Path)";
+            }
+        );
 
-            // 5. Start Engine
-            await mindarThree.start();
+        console.log("MEPROTECH: Starting Camera...");
+        await mindarThree.start();
+        console.log("MEPROTECH: MindAR Started.");
 
-            renderer.setAnimationLoop(() => {
-                renderer.render(scene, camera);
-            });
-
-        } catch (error) {
-            console.error("AR Start Failed:", error);
-        }
+        renderer.setAnimationLoop(() => {
+            renderer.render(scene, camera);
+        });
+    } catch (e) {
+        console.error("MEPROTECH: Critical AR Error", e);
+        loadingOverlay.innerText = "Critical Error: " + e.message;
     }
-
+}
     setup();
 </script>
 
