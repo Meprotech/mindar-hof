@@ -1,90 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEPROTECH AR</title>
-    
-    <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
-    <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-        "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
-      }
-    }
-    </script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>MEPROTECH AR</title>
+
+<script async src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+  }
+}
+</script>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #000;
+  font-family: sans-serif;
+}
+
+/* Fullscreen container */
+#container {
+  position: fixed;
+  inset: 0;
+}
+
+/* Camera feed */
+#container video {
+  position: absolute;
+  inset: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  object-fit: cover !important;
+}
+
+/* 3D canvas */
+#container canvas {
+  position: absolute;
+  inset: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+/* Simple Start Button */
+#startBtn {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 28px;
+  border: none;
+  border-radius: 30px;
+  background: #007AFF;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  z-index: 10;
+}
+
+/* Status text */
+#status {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 14px;
+  background: rgba(0,0,0,0.5);
+  padding: 6px 12px;
+  border-radius: 20px;
+  z-index: 10;
+}
+</style>
 </head>
+
 <body>
 
-    <div id="overlay">
-        <div id="loader-text" style="margin-bottom: 20px;">Initializing...</div>
-        <button id="startButton">START AR</button>
-    </div>
+<div id="container"></div>
+<div id="status">Loading...</div>
+<button id="startBtn" style="display:none;">Start AR</button>
 
-    <div id="ui-layer">
-        <div class="scanner-box"><div class="line"></div></div>
-        <p style="color: white; margin-top: 20px;">Point at Target</p>
-    </div>
+<script type="module">
+import * as THREE from 'three';
+import { MindARThree } from 'mindar-image-three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-    <div id="status"></div>
-    <div id="container"></div>
+const status = document.getElementById("status");
+const startBtn = document.getElementById("startBtn");
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { MindARThree } from 'mindar-image-three';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const mindarThree = new MindARThree({
+  container: document.querySelector("#container"),
+  imageTargetSrc: './assets/targets.mind',
+});
 
-        const container = document.querySelector("#container");
-        const startButton = document.querySelector("#startButton");
-        const overlay = document.querySelector("#overlay");
-        const uiLayer = document.querySelector("#ui-layer");
-        const status = document.querySelector("#status");
+const { renderer, scene, camera } = mindarThree;
 
-        const mindarThree = new MindARThree({
-            container: container,
-            imageTargetSrc: './assets/targets.mind',
-            uiLoading: "no", // Disable built-in loading UI to use our own
-            uiError: "no",
-            uiScanning: "no"
-        });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-        const {renderer, scene, camera} = mindarThree;
-        scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
+// Light
+const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+scene.add(light);
 
-        const anchor = mindarThree.addAnchor(0);
-        const loader = new GLTFLoader();
+// Anchor
+const anchor = mindarThree.addAnchor(0);
 
-        loader.load('./assets/model.glb', (gltf) => {
-            anchor.group.add(gltf.scene);
-            document.querySelector("#loader-text").style.display = "none";
-            startButton.style.display = "block";
-        });
+// Load Model
+const loader = new GLTFLoader();
 
-        startButton.addEventListener('click', async () => {
-            overlay.style.display = "none";
-            uiLayer.style.display = "flex";
-            
-            await mindarThree.start();
-            
-            // Force renderer to fill screen on start
-            renderer.setSize(window.innerWidth, window.innerHeight);
+loader.load(
+  './assets/model.glb',
+  (gltf) => {
+    const model = gltf.scene;
+    model.scale.set(0.5, 0.5, 0.5); // adjust if needed
+    anchor.group.add(model);
 
-            anchor.onTargetFound = () => { uiLayer.style.display = "none"; status.innerText = "Target Found"; };
-            anchor.onTargetLost = () => { uiLayer.style.display = "flex"; status.innerText = "Target Lost"; };
+    status.innerText = "Ready";
+    startBtn.style.display = "block";
+  },
+  (xhr) => {
+    if (xhr.total) {
+      const percent = Math.round((xhr.loaded / xhr.total) * 100);
+      status.innerText = `Loading ${percent}%`;
+    }
+  },
+  () => {
+    status.innerText = "Failed to load assets";
+  }
+);
 
-            renderer.setAnimationLoop(() => {
-                renderer.render(scene, camera);
-            });
-        });
+// Start AR on user interaction
+startBtn.addEventListener("click", async () => {
+  startBtn.style.display = "none";
+  status.innerText = "Starting AR...";
 
-        // Handle Orientation changes / Resize
-        window.addEventListener('resize', () => {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-        });
-    </script>
+  await mindarThree.start();
+
+  status.innerText = "Scan target image";
+
+  anchor.onTargetFound = () => {
+    status.innerText = "Target Found";
+  };
+
+  anchor.onTargetLost = () => {
+    status.innerText = "Scan target image";
+  };
+
+  renderer.setAnimationLoop(() => {
+    renderer.render(scene, camera);
+  });
+});
+</script>
+
 </body>
 </html>
