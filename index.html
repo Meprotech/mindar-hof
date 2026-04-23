@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEPROTECH AR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MEPROTECH | Premium AR</title>
     
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
 
@@ -17,22 +17,72 @@
     </script>
 
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #container { width: 100vw; height: 100vh; }
+
+        /* 1. The Branding & Loading Layer */
         #overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); color: white; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            z-index: 10; text-align: center; padding: 20px;
+            position: absolute; inset: 0; z-index: 20;
+            background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; transition: opacity 0.5s ease;
         }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+
+        #logo { width: 80px; margin-bottom: 20px; filter: drop-shadow(0 0 10px #00ff00); }
+
+        .loader {
+            width: 40px; height: 40px; border: 3px solid #333;
+            border-top: 3px solid #00ff00; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 15px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        button {
+            background: #00ff00; color: black; border: none; padding: 12px 30px;
+            font-weight: bold; border-radius: 5px; cursor: pointer; display: none;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        /* 2. The Scanning Viewfinder (Active during AR) */
+        #ui-helper {
+            position: absolute; inset: 0; z-index: 10;
+            display: none; pointer-events: none;
+            border: 40px solid rgba(0,0,0,0.3);
+        }
+
+        .viewfinder {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px; height: 280px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 20px;
+        }
+
+        .viewfinder::after {
+            content: ''; position: absolute; inset: 0;
+            border: 2px solid #00ff00; border-radius: 18px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
+
     <div id="overlay">
-        <div id="status">Waiting for System...</div>
-        <button id="startButton" style="display:none;">Start Experience</button>
+        <div id="logo">▲</div> <div class="loader" id="spinner"></div>
+        <div id="status">INITIALIZING...</div>
+        <button id="startButton">ENTER EXPERIENCE</button>
     </div>
+
+    <div id="ui-helper">
+        <div class="viewfinder"></div>
+        <div style="position:absolute; bottom: 20px; width:100%; text-align:center; color:white; font-size:14px;">
+            POINT CAMERA AT IMAGE
+        </div>
+    </div>
+
     <div id="container"></div>
 
     <script type="module">
@@ -40,50 +90,54 @@
         import { MindARThree } from 'mindar-image-three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-        const status = document.querySelector("#status");
-        const startButton = document.querySelector("#startButton");
-        const overlay = document.querySelector("#overlay");
-
         const setup = async () => {
-            try {
-                status.innerText = "Initializing Engine...";
-                const mindarThree = new MindARThree({
-                    container: document.querySelector("#container"),
-                    imageTargetSrc: './assets/targets.mind', 
-                });
+            const mindarThree = new MindARThree({
+                container: document.querySelector("#container"),
+                imageTargetSrc: './assets/targets.mind',
+            });
 
-                const {renderer, scene, camera} = mindarThree;
-                scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
+            const {renderer, scene, camera} = mindarThree;
 
-                const anchor = mindarThree.addAnchor(0);
+            // Lights
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            dirLight.position.set(5, 5, 5);
+            scene.add(dirLight);
 
-                status.innerText = "Loading 3D Model...";
-                const loader = new GLTFLoader();
+            const anchor = mindarThree.addAnchor(0);
+            const loader = new GLTFLoader();
+
+            // Parallel loading for speed
+            const [model] = await Promise.all([
+                new Promise(res => loader.load('./assets/model.glb', (g) => res(g))),
+                mindarThree.start()
+            ]);
+
+            anchor.group.add(model.scene);
+            
+            // UI Transition
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('status').innerText = 'SYSTEM READY';
+            const btn = document.getElementById('startButton');
+            btn.style.display = 'block';
+
+            btn.addEventListener('click', () => {
+                document.getElementById('overlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('overlay').style.display = 'none', 500);
+                document.getElementById('ui-helper').style.display = 'block';
                 
-                loader.load('./assets/model.glb', (gltf) => {
-                    anchor.group.add(gltf.scene);
-                    status.innerText = "Ready!";
-                    startButton.style.display = "block";
-                }, (xhr) => {
-                    const percent = Math.round((xhr.loaded / xhr.total) * 100);
-                    status.innerText = `Downloading Model: ${percent}%`;
-                }, (err) => {
-                    console.error("GLB Error:", err);
-                    status.innerText = "Model 404 - Check File Path";
+                renderer.setAnimationLoop(() => {
+                    renderer.render(scene, camera);
                 });
+            });
 
-                startButton.addEventListener('click', async () => {
-                    overlay.style.display = "none";
-                    await mindarThree.start();
-                    renderer.setAnimationLoop(() => {
-                        renderer.render(scene, camera);
-                    });
-                });
-
-            } catch (e) {
-                status.innerText = "Error: " + e.message;
-                console.error(e);
-            }
+            // Feedback logic
+            anchor.onTargetFound = () => {
+                document.getElementById('ui-helper').style.opacity = '0';
+            };
+            anchor.onTargetLost = () => {
+                document.getElementById('ui-helper').style.opacity = '1';
+            };
         }
 
         setup();
