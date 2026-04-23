@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEPROTECH WebAR</title>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+      }
+    }
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { MindARThree } from 'mindar-image-three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        const setup = async () => {
+            // 1. Initialize MindAR
+            const mindarThree = new THREE.MindARThree({
+                container: document.querySelector("#container"),
+                imageTargetSrc: './assets/targets.mind',
+            });
+
+            const {renderer, scene, camera} = mindarThree;
+
+            // 2. Add Lighting (Crucial for 3D realism)
+            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+            scene.add(light);
+
+            // 3. Setup Anchor
+            const anchor = mindarThree.addAnchor(0); // References the first image in .mind
+
+            // 4. Load GLB Model (The Industry Standard)
+            const loader = new GLTFLoader();
+            loader.load('./assets/pizza.glb', (gltf) => {
+                const model = gltf.scene;
+                model.scale.set(0.5, 0.5, 0.5); // Adjust based on model size
+                model.position.set(0, 0, 0);
+                anchor.group.add(model);
+            });
+
+            // 5. Start Engine
+            await mindarThree.start();
+
+            renderer.setAnimationLoop(() => {
+                renderer.render(scene, camera);
+            });
+        }
+
+        setup().catch(err => console.error("AR Initialization failed:", err));
+    </script>
+</body>
+</html>
