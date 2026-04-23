@@ -15,48 +15,6 @@
       }
     }
     </script>
-
-    <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
-        
-        /* The container MUST be fixed and fill the viewport */
-        #container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
-
-        /* Force MindAR's video and canvas to behave */
-        #container video, #container canvas { 
-            position: absolute; top: 0; left: 0; 
-            width: 100% !important; height: 100% !important; 
-            object-fit: cover !important; 
-        }
-
-        #overlay {
-            position: fixed; inset: 0; background: #000; color: white;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 100; text-align: center;
-        }
-
-        #startButton {
-            background: #007AFF; color: white; border: none; padding: 15px 40px;
-            border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer;
-            display: none;
-        }
-
-        #ui-layer {
-            position: fixed; inset: 0; pointer-events: none; z-index: 10;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-        }
-
-        .scanner-box {
-            width: 280px; height: 280px; border: 2px solid rgba(255,255,255,0.4);
-            border-radius: 20px; position: relative;
-            box-shadow: 0 0 0 1000px rgba(0,0,0,0.4); /* Dim out the rest of the screen */
-        }
-
-        .line { position: absolute; width: 100%; height: 2px; background: #007AFF; animation: scan 2s infinite; }
-        @keyframes scan { 0% { top: 0% } 100% { top: 100% } }
-
-        #status { position: fixed; bottom: 40px; width: 100%; text-align: center; color: white; font-size: 12px; z-index: 11; }
-    </style>
 </head>
 <body>
 
