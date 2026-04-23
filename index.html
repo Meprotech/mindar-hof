@@ -22,11 +22,17 @@
         
         #container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
 
-        /* Loading Screen */
+        /* Unauthorized Lock Screen */
+        #lock-screen { 
+            position: absolute; inset: 0; z-index: 200; background: #000; 
+            display: none; align-items: center; justify-content: center; text-align: center; 
+        }
+
+        /* Loading Screen Overlay */
         #overlay {
             position: absolute; inset: 0; z-index: 100; background: #000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: opacity 0.8s ease;
         }
 
         #status-text { font-size: 10px; letter-spacing: 4px; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 25px; font-weight: 300; }
@@ -37,16 +43,16 @@
         #startButton {
             background: none; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 16px 50px;
             font-size: 11px; letter-spacing: 3px; cursor: pointer; display: none;
-            transition: 0.4s ease; text-transform: uppercase;
+            transition: 0.4s ease; text-transform: uppercase; margin-top: 20px;
         }
         #startButton:hover { background: white; color: black; border-color: white; }
 
-        /* HUD & Controls */
+        /* HUD (Heads Up Display) */
         #hud { position: absolute; inset: 0; z-index: 10; pointer-events: none; opacity: 0; transition: opacity 0.8s ease; }
         
-        .header { position: absolute; top: 40px; width: 100%; text-align: center; font-size: 11px; letter-spacing: 5px; opacity: 0.5; font-weight: 300; }
+        #hud-header { position: absolute; top: 40px; width: 100%; text-align: center; font-size: 11px; letter-spacing: 5px; opacity: 0.5; font-weight: 300; }
 
-        .viewfinder {
+        #v-finder {
             position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
             width: 280px; height: 280px; border: 1px solid rgba(255,255,255,0.1); border-radius: 2px;
             transition: opacity 0.5s ease;
@@ -56,6 +62,7 @@
             top: 0; animation: scan 3s infinite ease-in-out;
         }
 
+        /* Glassmorphism Control Bar */
         .control-bar {
             position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
             width: 220px; padding: 15px;
@@ -68,30 +75,27 @@
         .btn-icon:active { transform: scale(0.9); background: rgba(255,255,255,0.1); }
         .btn-icon svg { width: 22px; fill: rgba(255,255,255,0.8); }
 
-        /* Unauthorized Screen */
-        #lock-screen { position: absolute; inset: 0; z-index: 200; background: #000; display: none; align-items: center; justify-content: center; text-align: center; }
-
         @keyframes scan { 0%, 100% { top: 0%; opacity: 0.2; } 50% { top: 100%; opacity: 1; } }
     </style>
 </head>
 <body>
 
     <div id="lock-screen">
-        <div style="letter-spacing: 2px; color: #ff3b3b; font-size: 12px;">DOMAIN NOT AUTHORIZED<br><span style="color:white; opacity:0.5; font-size: 10px;">CONTACT MEPROTECH SUPPORT</span></div>
+        <div style="letter-spacing: 2px; color: #ff3b3b; font-size: 12px;">DOMAIN NOT AUTHORIZED<br><span style="color:white; opacity:0.5; font-size: 10px;">MEPROTECH PROTECTED ASSET</span></div>
     </div>
 
     <div id="overlay">
-        <div id="status-text">INITIALIZING ENGINE</div>
+        <div id="status-text">SYSTEM BOOTING</div>
         <div id="progress-wrap"><div id="progress-bar"></div></div>
-        <button id="startButton">ENTER EXPERIENCE</button>
+        <button id="startButton">INITIALIZE AR</button>
     </div>
 
     <div id="hud">
-        <div id="hud-header" class="header">VISUALIZING ASSET</div>
-        <div id="v-finder" class="viewfinder"><div class="scan-line"></div></div>
+        <div id="hud-header">SEARCHING FOR TARGET</div>
+        <div id="v-finder"><div class="scan-line"></div></div>
         
         <div class="control-bar">
-            <div class="btn-icon" id="captureBtn" onclick="takePhoto()">
+            <div class="btn-icon" onclick="takePhoto()">
                 <svg viewBox="0 0 24 24"><path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2m8 3a5 5 0 1 0 5 5 5 5 0 0 0-5-5m0 2a3 3 0 1 1-3 3 3 3 0 0 1 3-3Z"/></svg>
             </div>
             <div class="btn-icon" onclick="location.reload()">
@@ -102,15 +106,18 @@
 
     <div id="container"></div>
 
-    <script type="module" src="./ar-logic.prod.js"></script>
+    <script type="module" src="./ar-logic.js"></script>
 
     <script>
         function takePhoto() {
             const canvas = document.querySelector('canvas');
-            if (!canvas) return;
+            if (!canvas) {
+                alert("Camera not ready");
+                return;
+            }
             const dataURL = canvas.toDataURL("image/png");
             const link = document.createElement('a');
-            link.download = `MEPROTECH_XR_${Date.now()}.png`;
+            link.download = `MEPROTECH_Capture_${Date.now()}.png`;
             link.href = dataURL;
             link.click();
         }
