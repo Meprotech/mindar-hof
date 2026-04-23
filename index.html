@@ -63,8 +63,13 @@
                 });
 
                 const {renderer, scene, camera} = mindarThree;
-                renderer.outputColorSpace = THREE.SRGBColorSpace;
 
+                // 1. Fix the yellow warning (Stop using outputEncoding)
+                renderer.outputColorSpace = THREE.SRGBColorSpace; 
+
+                // 2. Ensure textures show up correctly
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.setClearColor(0x000000, 0); // Essential for seeing the camera through the 3D scene
                 const anchor = mindarThree.addAnchor(0);
                 const loader = new GLTFLoader();
 
