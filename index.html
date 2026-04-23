@@ -3,78 +3,90 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MEPROTECH AR</title>
+    
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+      }
+    }
+    </script>
+
     <style>
-        body { margin: 0; overflow: hidden; background: #000; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         #container { width: 100vw; height: 100vh; }
-        #loading-overlay {
+        #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); color: white; display: flex;
-            align-items: center; justify-content: center; z-index: 10;
-            font-family: sans-serif;
+            background: rgba(0,0,0,0.8); color: white; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            z-index: 10; text-align: center; padding: 20px;
         }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div id="loading-overlay">Loading AR Experience...</div>
+    <div id="overlay">
+        <div id="status">Waiting for System...</div>
+        <button id="startButton" style="display:none;">Start Experience</button>
+    </div>
     <div id="container"></div>
 
-<script type="module">
-    // 1. You MUST use full URLs. No "bare" names like 'three'.
-    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-    import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
-    import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
+    <script type="module">
+        import * as THREE from 'three';
+        import { MindARThree } from 'mindar-image-three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
- const setup = async () => {
-    console.log("MEPROTECH: Setup started...");
-    const container = document.querySelector("#container");
-    const loadingOverlay = document.querySelector("#loading-overlay");
+        const status = document.querySelector("#status");
+        const startButton = document.querySelector("#startButton");
+        const overlay = document.querySelector("#overlay");
 
-    try {
-        const mindarThree = new MindARThree({
-            container: container,
-            imageTargetSrc: './assets/targets.mind', 
-        });
+        const setup = async () => {
+            try {
+                status.innerText = "Initializing Engine...";
+                const mindarThree = new MindARThree({
+                    container: document.querySelector("#container"),
+                    imageTargetSrc: './assets/targets.mind', 
+                });
 
-        const {renderer, scene, camera} = mindarThree;
-        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-        scene.add(light);
+                const {renderer, scene, camera} = mindarThree;
+                scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
 
-        const anchor = mindarThree.addAnchor(0);
+                const anchor = mindarThree.addAnchor(0);
 
-        const loader = new GLTFLoader();
-        console.log("MEPROTECH: Attempting to load GLB...");
+                status.innerText = "Loading 3D Model...";
+                const loader = new GLTFLoader();
+                
+                loader.load('./assets/model.glb', (gltf) => {
+                    anchor.group.add(gltf.scene);
+                    status.innerText = "Ready!";
+                    startButton.style.display = "block";
+                }, (xhr) => {
+                    const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                    status.innerText = `Downloading Model: ${percent}%`;
+                }, (err) => {
+                    console.error("GLB Error:", err);
+                    status.innerText = "Model 404 - Check File Path";
+                });
 
-        loader.load('./assets/model.glb', 
-            (gltf) => {
-                console.log("MEPROTECH: GLB Loaded Successfully");
-                anchor.group.add(gltf.scene);
-                loadingOverlay.style.display = 'none';
-            },
-            (xhr) => {
-                const percent = (xhr.loaded / xhr.total * 100);
-                console.log(`MEPROTECH: Model ${percent}% loaded`);
-                loadingOverlay.innerText = `Loading Model: ${Math.round(percent)}%`;
-            },
-            (err) => {
-                console.error("MEPROTECH: GLB Load Error", err);
-                loadingOverlay.innerText = "Model Load Failed (Check Path)";
+                startButton.addEventListener('click', async () => {
+                    overlay.style.display = "none";
+                    await mindarThree.start();
+                    renderer.setAnimationLoop(() => {
+                        renderer.render(scene, camera);
+                    });
+                });
+
+            } catch (e) {
+                status.innerText = "Error: " + e.message;
+                console.error(e);
             }
-        );
+        }
 
-        console.log("MEPROTECH: Starting Camera...");
-        await mindarThree.start();
-        console.log("MEPROTECH: MindAR Started.");
-
-        renderer.setAnimationLoop(() => {
-            renderer.render(scene, camera);
-        });
-    } catch (e) {
-        console.error("MEPROTECH: Critical AR Error", e);
-        loadingOverlay.innerText = "Critical Error: " + e.message;
-    }
-}
-    setup();
-</script>
-
+        setup();
+    </script>
 </body>
 </html>
