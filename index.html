@@ -19,17 +19,22 @@
     <style>
         :root { --accent: #00ff00; --glass: rgba(255, 255, 255, 0.05); --blur: blur(15px); }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, sans-serif; color: white; }
-        #container { width: 100vw; height: 100vh; position: absolute; inset: 0; }
         
-        /* 1. Unauthorized Screen */
+        /* The container where the camera and 3D live */
+        #container { width: 100vw; height: 100vh; position: absolute; inset: 0; background: transparent; }
+        
+        /* Force the video feed to be visible and cover the screen */
+        #container video { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; object-fit: cover; z-index: 0; }
+        #container canvas { z-index: 1; }
+
         #lock-screen { position: absolute; inset: 0; z-index: 200; background: #000; display: none; align-items: center; justify-content: center; text-align: center; }
 
-        /* 2. Professional Loading Overlay */
         #overlay {
             position: absolute; inset: 0; z-index: 100; background: #000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 1s ease;
+            transition: opacity 0.8s ease;
         }
+
         #status-text { font-size: 10px; letter-spacing: 4px; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 25px; }
         #progress-wrap { width: 160px; height: 1px; background: rgba(255,255,255,0.1); position: relative; }
         #progress-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; box-shadow: 0 0 15px var(--accent); }
@@ -38,30 +43,20 @@
             background: none; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 16px 50px;
             font-size: 11px; letter-spacing: 3px; cursor: pointer; display: none; margin-top: 25px; transition: 0.3s;
         }
-        #startButton:hover { background: white; color: black; border-color: white; }
+        #startButton:hover { background: white; color: black; }
 
-        /* 3. HUD (Viewfinder & Controls) */
         #hud { position: absolute; inset: 0; z-index: 10; pointer-events: none; opacity: 0; transition: opacity 0.8s ease; }
         .header { position: absolute; top: 40px; width: 100%; text-align: center; font-size: 11px; letter-spacing: 5px; opacity: 0.5; }
         
-        #v-finder { 
-            position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); 
-            width: 280px; height: 280px; border: 1px solid rgba(255,255,255,0.1); 
-            transition: opacity 0.5s ease;
-        }
-        .scan-line { 
-            position: absolute; width: 100%; height: 1px; 
-            background: linear-gradient(90deg, transparent, var(--accent), transparent); 
-            top: 0; animation: scan 3s infinite ease-in-out; 
-        }
+        #v-finder { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 280px; height: 280px; border: 1px solid rgba(255,255,255,0.1); transition: opacity 0.5s ease; }
+        .scan-line { position: absolute; width: 100%; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); top: 0; animation: scan 3s infinite ease-in-out; }
         
         .control-bar {
             position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
             width: 200px; padding: 15px; background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
             border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; display: flex; justify-content: space-around; pointer-events: auto;
         }
-        .btn-icon svg { width: 22px; fill: rgba(255,255,255,0.8); cursor: pointer; transition: 0.2s; }
-        .btn-icon:active { transform: scale(0.9); }
+        .btn-icon svg { width: 22px; fill: rgba(255,255,255,0.8); cursor: pointer; }
 
         @keyframes scan { 0%, 100% { top: 0%; opacity: 0.2; } 50% { top: 100%; opacity: 1; } }
     </style>
@@ -69,11 +64,11 @@
 <body>
 
     <div id="lock-screen">
-        <div style="letter-spacing: 2px; color: #ff3b3b; font-size: 12px;">DOMAIN UNAUTHORIZED<br><span style="color:white; opacity:0.5; font-size: 10px;">MEPROTECH SYSTEMS PROTECTION</span></div>
+        <div style="letter-spacing: 2px; color: #ff3b3b; font-size: 12px;">DOMAIN UNAUTHORIZED</div>
     </div>
 
     <div id="overlay">
-        <div id="status-text">SYSTEM INITIALIZING</div>
+        <div id="status-text">INITIALIZING SYSTEMS</div>
         <div id="progress-wrap"><div id="progress-bar"></div></div>
         <button id="startButton">START EXPERIENCE</button>
     </div>
@@ -95,7 +90,6 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
         (function() {
-            // 1. Domain Lock logic
             const allowed = ['meprotech.app', 'vercel.app', 'localhost'];
             if (!allowed.some(d => window.location.hostname.includes(d))) {
                 document.getElementById('lock-screen').style.display = 'flex';
@@ -111,85 +105,83 @@
                 const vFinder = document.getElementById('v-finder');
                 const header = document.getElementById('hud-header');
 
+                const mindarThree = new MindARThree({
+                    container: document.querySelector("#container"),
+                    imageTargetSrc: './assets/config.bin', 
+                });
+
+                const {renderer, scene, camera} = mindarThree;
+                renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+                scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+                const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+                sun.position.set(1, 10, 5);
+                scene.add(sun);
+
+                const anchor = mindarThree.addAnchor(0);
+                const loader = new GLTFLoader();
+
+                // Step 1: ONLY load the model first. DO NOT start the camera yet.
                 try {
-                    const mindarThree = new MindARThree({
-                        container: document.querySelector("#container"),
-                        imageTargetSrc: './assets/config.bin', 
+                    statusText.innerText = "FETCHING ASSETS";
+                    
+                    loader.load('./assets/asset.bin', (gltf) => {
+                        anchor.group.add(gltf.scene);
+                        statusText.innerText = "READY FOR XR";
+                        progressBar.style.width = "100%";
+                        startBtn.style.display = 'block';
+                    }, (xhr) => {
+                        if (xhr.lengthComputable) {
+                            progressBar.style.width = (xhr.loaded / xhr.total * 100) + '%';
+                        }
                     });
 
-                    const {renderer, scene, camera} = mindarThree;
-                    renderer.outputColorSpace = THREE.SRGBColorSpace; // Fix warning
-
-                    scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-                    const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-                    sun.position.set(1, 10, 5);
-                    scene.add(sun);
-
-                    const anchor = mindarThree.addAnchor(0);
-                    const loader = new GLTFLoader();
-
-                    statusText.innerText = "LOADING ASSETS";
-                    
-                    // Concurrent Loading for Speed
-                    const [modelGltf] = await Promise.all([
-                        new Promise((resolve, reject) => {
-                            loader.load('./assets/asset.bin', resolve, (xhr) => {
-                                if (xhr.lengthComputable) {
-                                    progressBar.style.width = (xhr.loaded / xhr.total * 100) + '%';
-                                }
-                            }, reject);
-                        }),
-                        mindarThree.start()
-                    ]);
-
-                    anchor.group.add(modelGltf.scene);
-                    
-                    statusText.innerText = "READY FOR XR";
-                    startBtn.style.display = 'block';
-
-                    startButton.addEventListener('click', async () => {
+                    // Step 2: Camera starts ONLY on user click
+                    startBtn.addEventListener('click', async () => {
+                        statusText.innerText = "OPENING CAMERA...";
+                        
+                        try {
+                            await mindarThree.start(); // Start camera here
+                            
                             overlay.style.opacity = '0';
                             setTimeout(() => {
                                 overlay.style.display = 'none';
                                 hud.style.opacity = '1';
                             }, 800);
 
-                            // FORCE VIDEO PLAY (Add this)
-                            const video = document.querySelector("video");
-                            if (video) {
-                                video.play().catch(e => console.log("Video play failed", e));
-                            }
-
-                            await mindarThree.start(); // Ensure start is awaited
-                            
                             renderer.setAnimationLoop(() => {
+                                if (anchor.group.children.length > 0) {
+                                    anchor.group.children[0].rotation.y += 0.005;
+                                }
                                 renderer.render(scene, camera);
                             });
-                        });
-
-                    anchor.onTargetFound = () => {
-                        vFinder.style.opacity = "0";
-                        header.innerText = "ASSET LOCKED";
-                    };
-                    anchor.onTargetLost = () => {
-                        vFinder.style.opacity = "1";
-                        header.innerText = "SEARCHING FOR TARGET";
-                    };
+                        } catch (camErr) {
+                            alert("Camera access denied. Please enable it in Safari settings.");
+                        }
+                    });
 
                 } catch (err) {
-                    statusText.innerText = "HARDWARE ERROR";
-                    console.error("Critical Failure:", err);
+                    statusText.innerText = "SYSTEM ERROR";
+                    console.error(err);
                 }
+
+                anchor.onTargetFound = () => {
+                    vFinder.style.opacity = "0";
+                    header.innerText = "ASSET LOCKED";
+                };
+                anchor.onTargetLost = () => {
+                    vFinder.style.opacity = "1";
+                    header.innerText = "VISUALIZING ASSET";
+                };
             }
 
             setup();
 
-            // Photo Capture Logic
             window.takePhoto = () => {
                 const canvas = document.querySelector('canvas');
                 if (canvas) {
                     const link = document.createElement('a');
-                    link.download = `MEPROTECH_XR_${Date.now()}.png`;
+                    link.download = `MEPROTECH_CAPTURE.png`;
                     link.href = canvas.toDataURL("image/png");
                     link.click();
                 }
