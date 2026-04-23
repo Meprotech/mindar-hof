@@ -18,51 +18,53 @@
     <div id="loading-overlay">Loading AR Experience...</div>
     <div id="container"></div>
 
-    <script type="module">
-        // Import everything as Modules to prevent "Import outside module" errors
-        import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-        import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+   <script type="module">
+    // 1. Use full URLs for EVERYTHING. No "bare" names like 'three'.
+    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+    import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
+
+    const setup = async () => {
+        const container = document.querySelector("#container");
         
-        // We use the ESM version of MindAR for compatibility with 'import'
-        import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
+        try {
+            // 2. Initialize MindAR
+            const mindarThree = new MindARThree({
+                container: container,
+                imageTargetSrc: './assets/targets.mind', // ENSURE THIS PATH IS CORRECT
+            });
 
-        const setup = async () => {
-            const container = document.querySelector("#container");
-            const loadingOverlay = document.querySelector("#loading-overlay");
+            const {renderer, scene, camera} = mindarThree;
 
-            try {
-                const mindarThree = new MindARThree({
-                    container: container,
-                    imageTargetSrc: './assets/targets.mind', // CHECK CASE SENSITIVITY IN VERCEL
-                });
+            // 3. Lighting
+            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+            scene.add(light);
 
-                const {renderer, scene, camera} = mindarThree;
+            const anchor = mindarThree.addAnchor(0);
 
-                // Light
-                const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-                scene.add(light);
+            // 4. Load your GLB Model
+            const loader = new GLTFLoader();
+            loader.load('./assets/model.glb', (gltf) => {
+                anchor.group.add(gltf.scene);
+                console.log("Model loaded successfully");
+            }, undefined, (error) => {
+                console.error("Model failed to load:", error);
+            });
 
-                const anchor = mindarThree.addAnchor(0);
+            // 5. Start the Engine
+            await mindarThree.start();
 
-                // Load Model
-                const loader = new GLTFLoader();
-                loader.load('./assets/model.glb', (gltf) => {
-                    anchor.group.add(gltf.scene);
-                    loadingOverlay.style.display = 'none'; // Hide loading when model is ready
-                });
+            renderer.setAnimationLoop(() => {
+                renderer.render(scene, camera);
+            });
 
-                await mindarThree.start();
-
-                renderer.setAnimationLoop(() => {
-                    renderer.render(scene, camera);
-                });
-            } catch (e) {
-                console.error("AR Start Failed:", e);
-                loadingOverlay.innerText = "Error: " + e.message;
-            }
+        } catch (error) {
+            console.error("AR Initialization failed:", error);
+            alert("AR Error: Check the console.");
         }
+    }
 
-        setup();
-    </script>
+    setup();
+</script>
 </body>
 </html>
