@@ -147,20 +147,25 @@
                     statusText.innerText = "READY FOR XR";
                     startBtn.style.display = 'block';
 
-                    startBtn.addEventListener('click', () => {
-                        overlay.style.opacity = '0';
-                        setTimeout(() => {
-                            overlay.style.display = 'none';
-                            hud.style.opacity = '1';
-                        }, 800);
+                    startButton.addEventListener('click', async () => {
+                            overlay.style.opacity = '0';
+                            setTimeout(() => {
+                                overlay.style.display = 'none';
+                                hud.style.opacity = '1';
+                            }, 800);
 
-                        renderer.setAnimationLoop(() => {
-                            if (anchor.group.children.length > 0) {
-                                anchor.group.children[0].rotation.y += 0.005; // Soft rotate
+                            // FORCE VIDEO PLAY (Add this)
+                            const video = document.querySelector("video");
+                            if (video) {
+                                video.play().catch(e => console.log("Video play failed", e));
                             }
-                            renderer.render(scene, camera);
+
+                            await mindarThree.start(); // Ensure start is awaited
+                            
+                            renderer.setAnimationLoop(() => {
+                                renderer.render(scene, camera);
+                            });
                         });
-                    });
 
                     anchor.onTargetFound = () => {
                         vFinder.style.opacity = "0";
