@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AR Direct</title>
+    <title>MEPROTECH AR</title>
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
     <script type="importmap">
     {
@@ -16,25 +16,14 @@
     <style>
         body, html { margin: 0; overflow: hidden; background: #000; width: 100%; height: 100%; }
         #container { width: 100vw; height: 100vh; }
-        /* Simple Scanner Line */
-        #scanner {
-            position: absolute; inset: 0; pointer-events: none;
-            border: 2px solid rgba(0, 255, 0, 0.2); z-index: 10;
-        }
-        #scanner::after {
-            content: ''; position: absolute; width: 100%; height: 2px;
-            background: #00ff00; top: 0; animation: scan 3s infinite linear;
-        }
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
         #tap-hint {
             position: absolute; top: 50%; width: 100%; text-align: center;
-            color: white; font-family: sans-serif; font-size: 12px; letter-spacing: 2px;
+            color: white; font-family: sans-serif; font-size: 14px; z-index: 100;
         }
     </style>
 </head>
 <body>
-    <div id="tap-hint">TAP TO ACTIVATE CAMERA</div>
-    <div id="scanner"></div>
+    <div id="tap-hint">TAP SCREEN TO SCAN</div>
     <div id="container"></div>
 
     <script type="module">
@@ -42,9 +31,10 @@
         import { MindARThree } from 'mindar-image-three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
+        // 1. Point these to your ACTUAL file names
         const mindarThree = new MindARThree({
             container: document.querySelector("#container"),
-            imageTargetSrc: './assets/config.bin',
+            imageTargetSrc: './targets.mind', 
         });
 
         const {renderer, scene, camera} = mindarThree;
@@ -53,8 +43,8 @@
         const anchor = mindarThree.addAnchor(0);
         const loader = new GLTFLoader();
 
-        // Load Asset immediately
-        loader.load('./assets/asset.bin', (gltf) => {
+        // 2. Point this to your ACTUAL model name
+        loader.load('./model.glb', (gltf) => {
             anchor.group.add(gltf.scene);
         });
 
@@ -68,7 +58,6 @@
             });
         }
 
-        // Handle iOS interaction requirement
         window.addEventListener('click', start, { once: true });
         window.addEventListener('touchstart', start, { once: true });
     </script>
