@@ -1,86 +1,93 @@
-(function() {
-    // Only allow these domains to run your code
-    const allowed = ['meprotech.app', 'localhost', 'vercel.app']; 
-    const currentHost = window.location.hostname;
-    const isLegal = allowed.some(d => currentHost.includes(d));
-
-    if (!isLegal) {
-        document.body.innerHTML = "<div style='color:white;text-align:center;margin-top:20%'><h1>UNAUTHORIZED DOMAIN</h1><p>License required for MEPROTECH solutions.</p></div>";
-        throw new Error("Domain Lock: Access Denied");
-    }
-})();
-
 import * as THREE from 'three';
 import { MindARThree } from 'mindar-image-three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const setup = async () => {
-    const status = document.getElementById('status');
-    const progress = document.getElementById('progress-bar');
-    const startBtn = document.getElementById('startButton');
+(function() {
+    // 1. DOMAIN LOCK (Add your domains here)
+    const allowed = ['meprotech.app', 'vercel.app', 'localhost'];
+    if (!allowed.some(d => window.location.hostname.includes(d))) {
+        document.getElementById('lock-screen').style.display = 'flex';
+        throw new Error("Unauthorized Domain");
+    }
 
-    const mindarThree = new MindARThree({
-        container: document.querySelector("#container"),
-        imageTargetSrc: './assets/targets.mind',
-    });
+    const setup = async () => {
+        // UI References - MATCHING HTML EXACTLY
+        const statusText = document.getElementById('status-text');
+        const progressBar = document.getElementById('progress-bar');
+        const startButton = document.getElementById('startButton');
+        const overlay = document.getElementById('overlay');
+        const hud = document.getElementById('hud');
+        const vFinder = document.getElementById('v-finder');
+        const header = document.getElementById('hud-header');
 
-    const {renderer, scene, camera} = mindarThree;
-    
-    // Fix Color Space Warning
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-    // Lighting
-    scene.add(new THREE.AmbientLight(0xffffff, 1.0));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-    sun.position.set(1, 10, 1);
-    scene.add(sun);
-
-    const anchor = mindarThree.addAnchor(0);
-    const loader = new GLTFLoader();
-
-    // Parallel loading logic
-    try {
-        const [modelGltf] = await Promise.all([
-            new Promise((res, rej) => {
-                loader.load('./assets/model.glb', res, (xhr) => {
-                    if (xhr.lengthComputable) {
-                        progress.style.width = (xhr.loaded / xhr.total * 100) + '%';
-                    }
-                }, rej);
-            }),
-            mindarThree.start()
-        ]);
-
-        anchor.group.add(modelGltf.scene);
-        
-        status.innerText = "System Ready";
-        document.getElementById('progress-container').style.display = 'none';
-        startBtn.style.display = 'block';
-
-        startBtn.addEventListener('click', () => {
-            document.getElementById('overlay').style.opacity = '0';
-            setTimeout(() => document.getElementById('overlay').style.display = 'none', 800);
-            
-            const uiHelper = document.getElementById('ui-helper');
-            uiHelper.style.display = 'block';
-            setTimeout(() => uiHelper.style.opacity = '1', 100);
-
-            renderer.setAnimationLoop(() => {
-                renderer.render(scene, camera);
-            });
+        const mindarThree = new MindARThree({
+            container: document.querySelector("#container"),
+            imageTargetSrc: './assets/config.bin', // Your renamed .mind file
         });
 
-        anchor.onTargetFound = () => {
-            document.getElementById('ui-helper').style.opacity = '0';
-        };
-        anchor.onTargetLost = () => {
-            document.getElementById('ui-helper').style.opacity = '1';
-        };
+        const {renderer, scene, camera} = mindarThree;
 
-    } catch (err) {
-        status.innerText = "Check Connection";
-        console.error(err);
+        // FIX: Remove warning and set correct color space
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+        sun.position.set(1, 10, 5);
+        scene.add(sun);
+
+        const anchor = mindarThree.addAnchor(0);
+        const loader = new GLTFLoader();
+
+        try {
+            statusText.innerText = "LOADING ASSETS";
+            const [modelGltf] = await Promise.all([
+                new Promise((res, rej) => {
+                    loader.load('./assets/asset.bin', res, (xhr) => {
+                        if (xhr.lengthComputable) {
+                            const percent = (xhr.loaded / xhr.total * 100);
+                            progressBar.style.width = percent + '%';
+                        }
+                    }, rej);
+                }),
+                mindarThree.start()
+            ]);
+
+            anchor.group.add(modelGltf.scene);
+            
+            statusText.innerText = "READY FOR XR";
+            progressBar.style.width = "100%";
+            startButton.style.display = 'block';
+
+            startButton.addEventListener('click', () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    hud.style.opacity = '1';
+                }, 800);
+
+                renderer.setAnimationLoop(() => {
+                    if (anchor.group.children.length > 0) {
+                        anchor.group.children[0].rotation.y += 0.005; // Subtle auto-rotate
+                    }
+                    renderer.render(scene, camera);
+                });
+            });
+
+            // Target Feedback
+            anchor.onTargetFound = () => {
+                vFinder.style.opacity = "0";
+                header.innerText = "ASSET LOCKED";
+            };
+            anchor.onTargetLost = () => {
+                vFinder.style.opacity = "1";
+                header.innerText = "VISUALIZING ASSET";
+            };
+
+        } catch (err) {
+            statusText.innerText = "HARDWARE ERROR";
+            console.error(err);
+        }
     }
-}
 
-setup();
+    setup();
+})();

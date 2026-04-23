@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MEPROTECH | Premium XR</title>
     
@@ -16,79 +17,85 @@
     </script>
 
     <style>
-        :root { --accent: #00ff00; --glass: rgba(255, 255, 255, 0.05); --blur: blur(10px); }
-        body { margin: 0; overflow: hidden; background: #000; font-family: -apple-system, sans-serif; color: white; }
+        :root { --accent: #00ff00; --glass: rgba(255, 255, 255, 0.05); --blur: blur(15px); }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, system-ui, sans-serif; color: white; }
         
-        /* 1. Subtle Background Loading */
+        #container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+
+        /* Loading Screen */
         #overlay {
-            position: absolute; inset: 0; z-index: 50; background: #000;
+            position: absolute; inset: 0; z-index: 100; background: #000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: all 1s ease;
+            transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        #status-text { font-size: 10px; letter-spacing: 3px; color: rgba(255,255,255,0.5); text-transform: uppercase; margin-bottom: 20px; }
+        #status-text { font-size: 10px; letter-spacing: 4px; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 25px; font-weight: 300; }
         
-        /* Minimalist Progress */
-        #progress-wrap { width: 150px; height: 1px; background: rgba(255,255,255,0.1); position: relative; }
-        #progress-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.4s; box-shadow: 0 0 10px var(--accent); }
+        #progress-wrap { width: 160px; height: 1px; background: rgba(255,255,255,0.1); position: relative; }
+        #progress-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; box-shadow: 0 0 15px var(--accent); }
 
         #startButton {
-            background: none; border: 1px solid white; color: white; padding: 15px 50px;
-            font-size: 11px; letter-spacing: 2px; cursor: pointer; display: none;
-            transition: 0.3s;
+            background: none; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 16px 50px;
+            font-size: 11px; letter-spacing: 3px; cursor: pointer; display: none;
+            transition: 0.4s ease; text-transform: uppercase;
         }
-        #startButton:hover { background: white; color: black; }
+        #startButton:hover { background: white; color: black; border-color: white; }
 
-        /* 2. Professional HUD (Heads Up Display) */
-        #hud { position: absolute; inset: 0; z-index: 10; pointer-events: none; opacity: 0; transition: 0.5s; }
+        /* HUD & Controls */
+        #hud { position: absolute; inset: 0; z-index: 10; pointer-events: none; opacity: 0; transition: opacity 0.8s ease; }
         
-        /* Header Branding */
-        .header { position: absolute; top: 30px; width: 100%; text-align: center; font-size: 12px; letter-spacing: 4px; opacity: 0.6; }
+        .header { position: absolute; top: 40px; width: 100%; text-align: center; font-size: 11px; letter-spacing: 5px; opacity: 0.5; font-weight: 300; }
 
-        /* Viewfinder with scanning hint */
         .viewfinder {
             position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
-            width: 260px; height: 260px; border: 1px solid rgba(255,255,255,0.1);
+            width: 280px; height: 280px; border: 1px solid rgba(255,255,255,0.1); border-radius: 2px;
+            transition: opacity 0.5s ease;
         }
         .scan-line {
-            position: absolute; width: 100%; height: 1px; background: var(--accent);
-            top: 0; animation: scan 3s infinite ease-in-out; opacity: 0.5;
+            position: absolute; width: 100%; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            top: 0; animation: scan 3s infinite ease-in-out;
         }
 
-        /* 3. Bottom Control Bar (Glassmorphism) */
         .control-bar {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 80%; max-width: 400px; padding: 20px;
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            width: 220px; padding: 15px;
             background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 30px;
             display: flex; justify-content: space-around; align-items: center; pointer-events: auto;
         }
 
-        .btn-icon { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .btn-icon svg { width: 20px; fill: white; }
+        .btn-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .btn-icon:active { transform: scale(0.9); background: rgba(255,255,255,0.1); }
+        .btn-icon svg { width: 22px; fill: rgba(255,255,255,0.8); }
 
-        @keyframes scan { 0%, 100% { top: 0; } 50% { top: 100%; } }
-        #container { width: 100vw; height: 100vh; }
+        /* Unauthorized Screen */
+        #lock-screen { position: absolute; inset: 0; z-index: 200; background: #000; display: none; align-items: center; justify-content: center; text-align: center; }
+
+        @keyframes scan { 0%, 100% { top: 0%; opacity: 0.2; } 50% { top: 100%; opacity: 1; } }
     </style>
 </head>
 <body>
 
+    <div id="lock-screen">
+        <div style="letter-spacing: 2px; color: #ff3b3b; font-size: 12px;">DOMAIN NOT AUTHORIZED<br><span style="color:white; opacity:0.5; font-size: 10px;">CONTACT MEPROTECH SUPPORT</span></div>
+    </div>
+
     <div id="overlay">
-        <div id="status-text">Meprotech Systems</div>
+        <div id="status-text">INITIALIZING ENGINE</div>
         <div id="progress-wrap"><div id="progress-bar"></div></div>
-        <button id="startButton">START EXPERIENCE</button>
+        <button id="startButton">ENTER EXPERIENCE</button>
     </div>
 
     <div id="hud">
-        <div class="header">VISUALIZING ASSET</div>
-        <div class="viewfinder"><div class="scan-line"></div></div>
+        <div id="hud-header" class="header">VISUALIZING ASSET</div>
+        <div id="v-finder" class="viewfinder"><div class="scan-line"></div></div>
         
         <div class="control-bar">
             <div class="btn-icon" id="captureBtn" onclick="takePhoto()">
                 <svg viewBox="0 0 24 24"><path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2m8 3a5 5 0 1 0 5 5 5 5 0 0 0-5-5m0 2a3 3 0 1 1-3 3 3 3 0 0 1 3-3Z"/></svg>
             </div>
-            <div class="btn-icon" onclick="alert('MEPROTECH XR v1.0')">
-                <svg viewBox="0 0 24 24"><path d="M11 9h2V7h-2v2m0 8h2v-6h-2v6m1-15A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2Z"/></svg>
+            <div class="btn-icon" onclick="location.reload()">
+                <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"/></svg>
             </div>
         </div>
     </div>
@@ -98,12 +105,12 @@
     <script type="module" src="./ar-logic.prod.js"></script>
 
     <script>
-        // Global helper for the Photo Feature
         function takePhoto() {
             const canvas = document.querySelector('canvas');
+            if (!canvas) return;
             const dataURL = canvas.toDataURL("image/png");
             const link = document.createElement('a');
-            link.download = 'MEPROTECH-AR-Capture.png';
+            link.download = `MEPROTECH_XR_${Date.now()}.png`;
             link.href = dataURL;
             link.click();
         }
