@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEPROTECH XR | Final Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEPROTECH AR</title>
     
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
+
     <script type="importmap">
     {
       "imports": {
@@ -17,32 +17,22 @@
     </script>
 
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; color: white; }
-        #container { width: 100vw; height: 100vh; position: absolute; inset: 0; background: transparent; }
-        
-        /* Force Video Visibility */
-        video { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; object-fit: cover !important; z-index: -1; }
-
-        #log { position: absolute; top: 10px; left: 10px; font-size: 10px; color: #00ff00; z-index: 100; pointer-events: none; max-width: 80%; }
-
-        #tap-screen {
-            position: absolute; inset: 0; z-index: 50;
-            display: flex; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.8); letter-spacing: 2px;
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        #container { width: 100vw; height: 100vh; }
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); color: white; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            z-index: 10; text-align: center; padding: 20px;
         }
-
-        .scanner {
-            position: absolute; width: 100%; height: 2px; background: #00ff00;
-            top: 0; animation: scan 3s infinite linear; z-index: 10; display: none;
-        }
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
-
-    <div id="log">System: Waiting for interaction...</div>
-    <div id="tap-screen">TAP TO START AR</div>
-    <div id="scanner" class="scanner"></div>
+    <div id="overlay">
+        <div id="status">Waiting for System...</div>
+        <button id="startButton" style="display:none;">Start Experience</button>
+    </div>
     <div id="container"></div>
 
     <script type="module">
@@ -50,60 +40,49 @@
         import { MindARThree } from 'mindar-image-three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-        const logger = document.getElementById('log');
-        const tap = document.getElementById('tap-screen');
+        const status = document.querySelector("#status");
+        const startButton = document.querySelector("#startButton");
+        const overlay = document.querySelector("#overlay");
 
         const setup = async () => {
-            logger.innerText += "\nEngine: Initializing...";
-            
             try {
+                status.innerText = "Initializing Engine...";
                 const mindarThree = new MindARThree({
                     container: document.querySelector("#container"),
-                    imageTargetSrc: './assets/targets.mind',
+                    imageTargetSrc: './assets/targets.mind', 
                 });
 
                 const {renderer, scene, camera} = mindarThree;
-
-                // 1. Fix the yellow warning (Stop using outputEncoding)
-                renderer.outputColorSpace = THREE.SRGBColorSpace; 
-
-                // 2. Ensure textures show up correctly
-                renderer.setPixelRatio(window.devicePixelRatio);
-                renderer.setClearColor(0x000000, 0); // Essential for seeing the camera through the 3D scene
-                const anchor = mindarThree.addAnchor(0);
-                const loader = new GLTFLoader();
-
-                logger.innerText += "\nAssets: Loading model...";
-                loader.load('./assets/model.glb', (gltf) => {
-                    anchor.group.add(gltf.scene);
-                    logger.innerText += "\nAssets: Model Loaded.";
-                }, null, (e) => logger.innerText += "\nError: Model 404");
-
                 scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
 
-                const startAR = async () => {
-                    tap.style.display = 'none';
-                    logger.innerText += "\nCamera: Requesting access...";
-                    
-                    try {
-                        await mindarThree.start();
-                        logger.innerText += "\nCamera: Active.";
-                        document.getElementById('scanner').style.display = 'block';
+                const anchor = mindarThree.addAnchor(0);
 
-                        renderer.setAnimationLoop(() => {
-                            renderer.render(scene, camera);
-                        });
-                    } catch (e) {
-                        logger.innerText += "\nError: Camera Denied.";
-                        alert("Please Allow Camera in Safari Settings.");
-                    }
-                }
+                status.innerText = "Loading 3D Model...";
+                const loader = new GLTFLoader();
+                
+                loader.load('./assets/model.glb', (gltf) => {
+                    anchor.group.add(gltf.scene);
+                    status.innerText = "Ready!";
+                    startButton.style.display = "block";
+                }, (xhr) => {
+                    const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                    status.innerText = `Downloading Model: ${percent}%`;
+                }, (err) => {
+                    console.error("GLB Error:", err);
+                    status.innerText = "Model 404 - Check File Path";
+                });
 
-                window.addEventListener('click', startAR, { once: true });
-                window.addEventListener('touchstart', startAR, { once: true });
+                startButton.addEventListener('click', async () => {
+                    overlay.style.display = "none";
+                    await mindarThree.start();
+                    renderer.setAnimationLoop(() => {
+                        renderer.render(scene, camera);
+                    });
+                });
 
-            } catch (err) {
-                logger.innerText += "\nFatal: " + err.message;
+            } catch (e) {
+                status.innerText = "Error: " + e.message;
+                console.error(e);
             }
         }
 
