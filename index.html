@@ -2,62 +2,67 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEPROTECH WebAR</title>
-    <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-        "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
-      }
-    }
-    </script>
-    <link rel="stylesheet" href="style.css">
+    <title>MEPROTECH AR</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        #container { width: 100vw; height: 100vh; }
+        #loading-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); color: white; display: flex;
+            align-items: center; justify-content: center; z-index: 10;
+            font-family: sans-serif;
+        }
+    </style>
 </head>
 <body>
+    <div id="loading-overlay">Loading AR Experience...</div>
     <div id="container"></div>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"></script>
 
-<script type="module">
-    // We still use type="module" to use THREE.js addons like GLTFLoader
-    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-    import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
-
-    const setup = async () => {
-        // IMPORTANT: The constructor is located at window.MINDAR.IMAGE.MindARThree
-        const MindARThree = window.MINDAR.IMAGE.MindARThree;
+    <script type="module">
+        // Import everything as Modules to prevent "Import outside module" errors
+        import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+        import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
         
-        const mindarThree = new MindARThree({
-            container: document.querySelector("#container"),
-            imageTargetSrc: './assets/targets.mind',
-        });
+        // We use the ESM version of MindAR for compatibility with 'import'
+        import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
 
-        const {renderer, scene, camera} = mindarThree;
+        const setup = async () => {
+            const container = document.querySelector("#container");
+            const loadingOverlay = document.querySelector("#loading-overlay");
 
-        // Add lighting
-        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-        scene.add(light);
+            try {
+                const mindarThree = new MindARThree({
+                    container: container,
+                    imageTargetSrc: './assets/targets.mind', // CHECK CASE SENSITIVITY IN VERCEL
+                });
 
-        // Setup Anchor
-        const anchor = mindarThree.addAnchor(0);
+                const {renderer, scene, camera} = mindarThree;
 
-        // Load GLB
-        const loader = new GLTFLoader();
-        loader.load('./assets/model.glb', (gltf) => {
-            anchor.group.add(gltf.scene);
-        }, undefined, (error) => {
-            console.error("GLB Load Error:", error);
-        });
+                // Light
+                const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+                scene.add(light);
 
-        // Start
-        await mindarThree.start();
+                const anchor = mindarThree.addAnchor(0);
 
-        renderer.setAnimationLoop(() => {
-            renderer.render(scene, camera);
-        });
-    }
+                // Load Model
+                const loader = new GLTFLoader();
+                loader.load('./assets/model.glb', (gltf) => {
+                    anchor.group.add(gltf.scene);
+                    loadingOverlay.style.display = 'none'; // Hide loading when model is ready
+                });
 
-    setup().catch(err => console.error("AR Initialization failed:", err));
-</script>
+                await mindarThree.start();
+
+                renderer.setAnimationLoop(() => {
+                    renderer.render(scene, camera);
+                });
+            } catch (e) {
+                console.error("AR Start Failed:", e);
+                loadingOverlay.innerText = "Error: " + e.message;
+            }
+        }
+
+        setup();
+    </script>
 </body>
 </html>
