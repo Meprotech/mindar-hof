@@ -1,10 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEPROTECH | Premium XR</title>
-    
+    <title>AR Direct</title>
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
     <script type="importmap">
     {
@@ -15,73 +13,28 @@
       }
     }
     </script>
-
     <style>
-        :root { --accent: #00ff00; --glass: rgba(255, 255, 255, 0.05); --blur: blur(15px); }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, sans-serif; color: white; }
-        
-        /* The container where the camera and 3D live */
-        #container { width: 100vw; height: 100vh; position: absolute; inset: 0; background: transparent; }
-        
-        /* Force the video feed to be visible and cover the screen */
-        #container video { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; object-fit: cover; z-index: 0; }
-        #container canvas { z-index: 1; }
-
-        #lock-screen { position: absolute; inset: 0; z-index: 200; background: #000; display: none; align-items: center; justify-content: center; text-align: center; }
-
-        #overlay {
-            position: absolute; inset: 0; z-index: 100; background: #000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 0.8s ease;
+        body, html { margin: 0; overflow: hidden; background: #000; width: 100%; height: 100%; }
+        #container { width: 100vw; height: 100vh; }
+        /* Simple Scanner Line */
+        #scanner {
+            position: absolute; inset: 0; pointer-events: none;
+            border: 2px solid rgba(0, 255, 0, 0.2); z-index: 10;
         }
-
-        #status-text { font-size: 10px; letter-spacing: 4px; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 25px; }
-        #progress-wrap { width: 160px; height: 1px; background: rgba(255,255,255,0.1); position: relative; }
-        #progress-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; box-shadow: 0 0 15px var(--accent); }
-        
-        #startButton {
-            background: none; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 16px 50px;
-            font-size: 11px; letter-spacing: 3px; cursor: pointer; display: none; margin-top: 25px; transition: 0.3s;
+        #scanner::after {
+            content: ''; position: absolute; width: 100%; height: 2px;
+            background: #00ff00; top: 0; animation: scan 3s infinite linear;
         }
-        #startButton:hover { background: white; color: black; }
-
-        #hud { position: absolute; inset: 0; z-index: 10; pointer-events: none; opacity: 0; transition: opacity 0.8s ease; }
-        .header { position: absolute; top: 40px; width: 100%; text-align: center; font-size: 11px; letter-spacing: 5px; opacity: 0.5; }
-        
-        #v-finder { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 280px; height: 280px; border: 1px solid rgba(255,255,255,0.1); transition: opacity 0.5s ease; }
-        .scan-line { position: absolute; width: 100%; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); top: 0; animation: scan 3s infinite ease-in-out; }
-        
-        .control-bar {
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
-            width: 200px; padding: 15px; background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; display: flex; justify-content: space-around; pointer-events: auto;
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        #tap-hint {
+            position: absolute; top: 50%; width: 100%; text-align: center;
+            color: white; font-family: sans-serif; font-size: 12px; letter-spacing: 2px;
         }
-        .btn-icon svg { width: 22px; fill: rgba(255,255,255,0.8); cursor: pointer; }
-
-        @keyframes scan { 0%, 100% { top: 0%; opacity: 0.2; } 50% { top: 100%; opacity: 1; } }
     </style>
 </head>
 <body>
-
-    <div id="lock-screen">
-        <div style="letter-spacing: 2px; color: #ff3b3b; font-size: 12px;">DOMAIN UNAUTHORIZED</div>
-    </div>
-
-    <div id="overlay">
-        <div id="status-text">INITIALIZING SYSTEMS</div>
-        <div id="progress-wrap"><div id="progress-bar"></div></div>
-        <button id="startButton">START EXPERIENCE</button>
-    </div>
-
-    <div id="hud">
-        <div id="hud-header" class="header">VISUALIZING ASSET</div>
-        <div id="v-finder"><div class="scan-line"></div></div>
-        <div class="control-bar">
-            <div class="btn-icon" onclick="takePhoto()"><svg viewBox="0 0 24 24"><path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2m8 3a5 5 0 1 0 5 5 5 5 0 0 0-5-5m0 2a3 3 0 1 1-3 3 3 3 0 0 1 3-3Z"/></svg></div>
-            <div class="btn-icon" onclick="location.reload()"><svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"/></svg></div>
-        </div>
-    </div>
-
+    <div id="tap-hint">TAP TO ACTIVATE CAMERA</div>
+    <div id="scanner"></div>
     <div id="container"></div>
 
     <script type="module">
@@ -89,104 +42,35 @@
         import { MindARThree } from 'mindar-image-three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-        (function() {
-            const allowed = ['meprotech.app', 'vercel.app', 'localhost'];
-            if (!allowed.some(d => window.location.hostname.includes(d))) {
-                document.getElementById('lock-screen').style.display = 'flex';
-                throw new Error("Unauthorized Usage");
-            }
+        const mindarThree = new MindARThree({
+            container: document.querySelector("#container"),
+            imageTargetSrc: './assets/config.bin',
+        });
 
-            const setup = async () => {
-                const statusText = document.getElementById('status-text');
-                const progressBar = document.getElementById('progress-bar');
-                const startBtn = document.getElementById('startButton');
-                const overlay = document.getElementById('overlay');
-                const hud = document.getElementById('hud');
-                const vFinder = document.getElementById('v-finder');
-                const header = document.getElementById('hud-header');
+        const {renderer, scene, camera} = mindarThree;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-                const mindarThree = new MindARThree({
-                    container: document.querySelector("#container"),
-                    imageTargetSrc: './assets/config.bin', 
-                });
+        const anchor = mindarThree.addAnchor(0);
+        const loader = new GLTFLoader();
 
-                const {renderer, scene, camera} = mindarThree;
-                renderer.outputColorSpace = THREE.SRGBColorSpace;
+        // Load Asset immediately
+        loader.load('./assets/asset.bin', (gltf) => {
+            anchor.group.add(gltf.scene);
+        });
 
-                scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-                const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-                sun.position.set(1, 10, 5);
-                scene.add(sun);
+        scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
 
-                const anchor = mindarThree.addAnchor(0);
-                const loader = new GLTFLoader();
+        const start = async () => {
+            document.getElementById('tap-hint').style.display = 'none';
+            await mindarThree.start();
+            renderer.setAnimationLoop(() => {
+                renderer.render(scene, camera);
+            });
+        }
 
-                // Step 1: ONLY load the model first. DO NOT start the camera yet.
-                try {
-                    statusText.innerText = "FETCHING ASSETS";
-                    
-                    loader.load('./assets/asset.bin', (gltf) => {
-                        anchor.group.add(gltf.scene);
-                        statusText.innerText = "READY FOR XR";
-                        progressBar.style.width = "100%";
-                        startBtn.style.display = 'block';
-                    }, (xhr) => {
-                        if (xhr.lengthComputable) {
-                            progressBar.style.width = (xhr.loaded / xhr.total * 100) + '%';
-                        }
-                    });
-
-                    // Step 2: Camera starts ONLY on user click
-                    startBtn.addEventListener('click', async () => {
-                        statusText.innerText = "OPENING CAMERA...";
-                        
-                        try {
-                            await mindarThree.start(); // Start camera here
-                            
-                            overlay.style.opacity = '0';
-                            setTimeout(() => {
-                                overlay.style.display = 'none';
-                                hud.style.opacity = '1';
-                            }, 800);
-
-                            renderer.setAnimationLoop(() => {
-                                if (anchor.group.children.length > 0) {
-                                    anchor.group.children[0].rotation.y += 0.005;
-                                }
-                                renderer.render(scene, camera);
-                            });
-                        } catch (camErr) {
-                            alert("Camera access denied. Please enable it in Safari settings.");
-                        }
-                    });
-
-                } catch (err) {
-                    statusText.innerText = "SYSTEM ERROR";
-                    console.error(err);
-                }
-
-                anchor.onTargetFound = () => {
-                    vFinder.style.opacity = "0";
-                    header.innerText = "ASSET LOCKED";
-                };
-                anchor.onTargetLost = () => {
-                    vFinder.style.opacity = "1";
-                    header.innerText = "VISUALIZING ASSET";
-                };
-            }
-
-            setup();
-
-            window.takePhoto = () => {
-                const canvas = document.querySelector('canvas');
-                if (canvas) {
-                    const link = document.createElement('a');
-                    link.download = `MEPROTECH_CAPTURE.png`;
-                    link.href = canvas.toDataURL("image/png");
-                    link.click();
-                }
-            };
-        })();
+        // Handle iOS interaction requirement
+        window.addEventListener('click', start, { once: true });
+        window.addEventListener('touchstart', start, { once: true });
     </script>
 </body>
 </html>
